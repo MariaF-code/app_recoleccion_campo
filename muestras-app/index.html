@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Registro de Muestras Biológicas</title>
+<link rel="manifest" href="manifest.json">
+<style>
+  body { font-family: Arial, sans-serif; padding: 15px; background: #f4f4f4; }
+  h2 { text-align: center; }
+  label { display: block; margin-top: 10px; }
+  select, input, button { width: 100%; padding: 8px; margin-top: 5px; font-size: 16px; }
+  button { background: #2b7a0b; color: white; border: none; border-radius: 8px; margin-top: 15px; }
+  .hidden { display: none; }
+</style>
+</head>
+<body>
+<h2>Registro de Muestras Biológicas</h2>
+
+<form id="formulario">
+  <label>Tipo de Microhábitat</label>
+  <select id="microhabitat">
+    <option>Zona de Pastoreo</option>
+    <option>Bosque de Galería</option>
+    <option>Bosque de Regeneración</option>
+  </select>
+
+  <label>Radiación Solar</label>
+  <select id="radiacion">
+    <option>Baja</option>
+    <option>Alta</option>
+  </select>
+
+  <label>Humedad</label>
+  <select id="humedad">
+    <option>Baja</option>
+    <option>Alta</option>
+  </select>
+
+  <label>Factores Antropológicos</label>
+  <select id="antropo">
+    <option>Baja</option>
+    <option>Alta</option>
+  </select>
+
+  <label>Tipo de Muestra</label>
+  <select id="tipoMuestra" onchange="mostrarFormulario()">
+    <option value="">Seleccionar</option>
+    <option value="Poliporos">Políporos</option>
+    <option value="Liquen">Líquenes</option>
+  </select>
+
+  <div id="formPoliporos" class="hidden">
+    <label>Margen</label>
+    <select id="margen">
+      <option>Agudo</option>
+      <option>Redondeado</option>
+    </select>
+    <label>Pileo</label>
+    <select id="pileo">
+      <option>Glaba</option><option>Pubescente</option><option>Velutinosa</option><option>Vilosa</option><option>Tomentosa</option><option>Hirsuta</option>
+    </select>
+    <label>Himenóforo</label>
+    <select id="himeno">
+      <option>Estratificada</option><option>No Estratificada</option>
+    </select>
+    <label>Basidioma</label>
+    <select id="basidioma">
+      <option>Pie Central</option><option>Pie Excéntrico</option><option>Pie Lateral</option><option>Semicircular</option><option>Anchamente Adherido</option><option>Por Punto</option><option>Pendente</option><option>Aplanado</option><option>Convexo</option><option>Ungulado</option><option>Obungulado</option><option>Triquetros</option><option>Resupinado</option><option>Efuso-reflejos</option><option>Ingricado</option>
+    </select>
+    <label>Medidas (cm)</label>
+    <input type="number" id="alto" placeholder="Alto">
+    <input type="number" id="ancho" placeholder="Ancho">
+    <input type="number" id="largo" placeholder="Largo">
+  </div>
+
+  <div id="formLiquen" class="hidden">
+    <label>Sustrato</label>
+    <select id="sustrato">
+      <option>Saxícolas</option><option>Epífitos</option><option>Terrícolas</option>
+    </select>
+    <label>Talo</label>
+    <select id="talo">
+      <option>Crustáceo</option><option>Gelatinoso</option><option>Foliáceo</option><option>Fructiculoso</option><option>Compuesto</option>
+    </select>
+    <label>Hábito</label>
+    <select id="habito">
+      <option>Colgante</option><option>Erecto</option><option>Rastrero</option><option>SubErecto</option>
+    </select>
+    <label>Textura del Talo</label>
+    <select id="textura">
+      <option>Pulverulento</option><option>Escuamuloso</option><option>Pruinoso</option><option>Liso</option>
+    </select>
+    <label>Borde del Talo</label>
+    <select id="borde">
+      <option>Globulado</option><option>Entero</option><option>Irregular</option><option>Ondulado</option>
+    </select>
+    <label>Color</label>
+    <select id="color">
+      <option>Amarillo</option><option>Rojo</option><option>Verde</option><option>Café</option><option>Negro</option>
+    </select>
+  </div>
+
+  <label>Lugar de Muestreo</label>
+  <input type="text" id="lugar" placeholder="Ej: Sitio 1">
+
+  <button type="button" onclick="guardarMuestra()">Guardar muestra</button>
+  <button type="button" onclick="guardarYNueva()">Guardar y crear nueva</button>
+  <button type="button" onclick="exportarCSV()">Exportar CSV</button>
+</form>
+
+<script>
+let db;
+const request = indexedDB.open('MuestrasDB', 1);
+request.onupgradeneeded = e => {
+  db = e.target.result;
+  db.createObjectStore('muestras', { keyPath: 'id' });
+};
+request.onsuccess = e => db = e.target.result;
+
+function mostrarFormulario() {
+  const tipo = document.getElementById('tipoMuestra').value;
+  document.getElementById('formPoliporos').classList.toggle('hidden', tipo !== 'Poliporos');
+  document.getElementById('formLiquen').classList.toggle('hidden', tipo !== 'Liquen');
+}
+
+function guardarMuestra() {
+  const datos = obtenerDatos();
+  if (!datos.lugar) { alert('Debes ingresar el lugar de muestreo'); return; }
+  const id = `${datos.lugar}_${datos.tipo}_${Date.now()}`;
+  const registro = { id, ...datos };
+  const tx = db.transaction('muestras', 'readwrite');
+  tx.objectStore('muestras').add(registro);
+  alert('Muestra guardada');
+}
+
+function guardarYNueva() {
+  guardarMuestra();
+  document.getElementById('formulario').reset();
+  document.getElementById('formPoliporos').classList.add('hidden');
+  document.getElementById('formLiquen').classList.add('hidden');
+}
+
+function obtenerDatos() {
+  const tipo = document.getElementById('tipoMuestra').value;
+  const datos = {
+    microhabitat: microhabitat.value,
+    radiacion: radiacion.value,
+    humedad: humedad.value,
+    antropo: antropo.value,
+    tipo: tipo,
+    lugar: lugar.value.trim()
+  };
+  if (tipo === 'Poliporos') {
+    Object.assign(datos, {
+      margen: margen.value, pileo: pileo.value, himeno: himeno.value, basidioma: basidioma.value,
+      alto: alto.value, ancho: ancho.value, largo: largo.value
+    });
+  } else if (tipo === 'Liquen') {
+    Object.assign(datos, {
+      sustrato: sustrato.value, talo: talo.value, habito: habito.value, textura: textura.value, borde: borde.value, color: color.value
+    });
+  }
+  return datos;
+}
+
+function exportarCSV() {
+  const tx = db.transaction('muestras', 'readonly');
+  const store = tx.objectStore('muestras');
+  const req = store.getAll();
+  req.onsuccess = () => {
+    const muestras = req.result.sort((a,b) => a.lugar.localeCompare(b.lugar));
+    const unicos = [];
+    const vistos = new Set();
+    muestras.forEach(m => {
+      const clave = JSON.stringify(m);
+      if (!vistos.has(clave)) { vistos.add(clave); unicos.push(m); }
+    });
+    let csv = Object.keys(unicos[0]).join(',') + '\n';
+    unicos.forEach(r => csv += Object.values(r).map(v => `"${v??''}"`).join(',') + '\n');
+    const blob = new Blob([csv], {type: 'text/csv;charset=utf-8;'});
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = 'muestras.csv';
+    link.click();
+  }
+}
+
+</script>
+
+<script>
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("service-worker.js");
+}
+</script>
+
+</body>
+</html>
